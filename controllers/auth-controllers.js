@@ -1,8 +1,13 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import gravatar from "gravatar";
+import path from "path";
+import fs from "fs/promises";
 import "dotenv/config.js";
 import { HttpError } from "../helpers/index.js";
 import User from "../models/Users.js";
+import Jimp from "jimp";
+import { error } from "console";
 
 const { SECRET_JWT } = process.env;
 
@@ -15,7 +20,13 @@ export async function register(req, res, next) {
     }
     const hashPassword = await bcrypt.hash(password, 10);
 
-    const newUser = await User.create({ ...req.body, password: hashPassword });
+    const avatarURL = gravatar.url(email);
+
+    const newUser = await User.create({
+      ...req.body,
+      password: hashPassword,
+      avatarURL,
+    });
 
     res.status(201).json({
       user: { email: newUser.email, subscription: newUser.subscription },
@@ -83,6 +94,37 @@ export async function updateSubscription(req, res, next) {
     } else {
       res.json(result);
     }
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateAvatar(req, res, next) {
+  try {
+    const avatarsDir = path.resolve("public", "avatars");
+
+    const { _id } = req.user;
+
+    const { path: oldPath, filename } = req.file;
+
+    await Jimp.read(oldPath)
+      .then((image) => {
+        image.resize(250, 250).writeAsync(oldPath);
+      })
+      .catch((error) => {
+        console.log(error.message);
+      })
+      .catch((error) => {
+        HttpError(404, error.message);
+      });
+
+    await fs.rename(oldPath, path.join(avatarsDir, filename));
+
+    const result = await User.findOneAndUpdate(_id, {
+      avatarURL: path.join("public", "avatars", filename),
+    });
+
+    res.json(result.avatarURL);
   } catch (error) {
     next(error);
   }

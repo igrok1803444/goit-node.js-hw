@@ -4,6 +4,7 @@ import {
   authorization,
   isEmptyBody,
   isValid,
+  upload,
 } from "../../middlewares/index.js";
 
 const authRouter = express.Router();
@@ -27,5 +28,12 @@ authRouter.patch(
   isEmptyBody,
   isValid.isValidUpdateSubscription,
   authController.updateSubscription
+);
+
+authRouter.patch(
+  "/avatars",
+  authorization,
+  upload.single("avatar"),
+  authController.updateAvatar
 );
 export default authRouter;
