@@ -61,27 +61,16 @@ export async function login(req, res, next) {
 export async function logout(req, res, next) {
   const { _id: id } = req.user;
 
-  const user = await User.findById(id);
-
-  if (!user) {
-    throw HttpError(401, "Not authorized");
-  }
   await User.findByIdAndUpdate(id, { token: "" });
   res.status(204).json({ message: "Not authorized" });
 }
 
 export async function current(req, res, next) {
-  const { _id: id } = req.user;
-
-  const user = await User.findById(id);
-
-  if (!user) {
-    throw HttpError(401, "Not authorized");
-  }
+  const { email, subscription } = req.user;
 
   res.json({
-    email: user.email,
-    subscription: user.subscription,
+    email: email,
+    subscription: subscription,
   });
 }
 export async function updateSubscription(req, res, next) {

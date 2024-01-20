@@ -11,9 +11,6 @@ const subscriptionValid = ["starter", "pro", "business"];
 export const addUserSchema = Joi.object({
   password: Joi.string().required(),
   email: Joi.string().pattern(emailRegExp).required(),
-  subscription: Joi.string()
-    .valid(...subscriptionValid)
-    .default("starter"),
 });
 
 export const updateSubscriptionSchema = Joi.object({
