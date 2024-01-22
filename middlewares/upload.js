@@ -24,7 +24,7 @@ const fileFilter = (req, file, callback) => {
   if (extention === "exe") {
     return callback(HttpError(400, ".exe not allowed"));
   }
-  callback(null, true);
+  callback(null, file);
 };
 
 const upload = multer({

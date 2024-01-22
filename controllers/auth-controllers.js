@@ -37,11 +37,13 @@ export async function register(req, res, next) {
 }
 export async function login(req, res, next) {
   const { email, password } = req.body;
+
+  console.log(email);
   try {
     const user = await User.findOne({ email });
 
     if (!user) {
-      throw HttpError(401, "Email or password is wrong");
+      throw HttpError(401, "Email is wrong");
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password);
@@ -107,18 +109,17 @@ export async function updateAvatar(req, res, next) {
 
     const { path: oldPath, filename } = req.file;
 
+    const newPath = path.join(avatarsDir, filename);
+
     await Jimp.read(oldPath)
       .then((image) => {
-        image.resize(250, 250).writeAsync(oldPath);
-      })
-      .catch((error) => {
-        console.log(error.message);
+        return image.resize(250, 250).writeAsync(oldPath);
       })
       .catch((error) => {
         HttpError(404, error.message);
       });
 
-    await fs.rename(oldPath, path.join(avatarsDir, filename));
+    await fs.rename(oldPath, newPath);
 
     const result = await User.findOneAndUpdate(_id, {
       avatarURL: path.join("public", "avatars", filename),
