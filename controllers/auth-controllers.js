@@ -111,15 +111,15 @@ export async function updateAvatar(req, res, next) {
 
     const newPath = path.join(avatarsDir, filename);
 
-    await Jimp.read(oldPath)
+    await fs.rename(oldPath, newPath);
+
+    await Jimp.read(newPath)
       .then((image) => {
-        return image.resize(250, 250).writeAsync(oldPath);
+        return image.resize(250, 250).writeAsync(newPath);
       })
       .catch((error) => {
         HttpError(404, error.message);
       });
-
-    await fs.rename(oldPath, newPath);
 
     const result = await User.findOneAndUpdate(_id, {
       avatarURL: path.join("public", "avatars", filename),
