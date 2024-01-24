@@ -4,12 +4,13 @@ import gravatar from "gravatar";
 import path from "path";
 import fs from "fs/promises";
 import "dotenv/config.js";
-import { HttpError } from "../helpers/index.js";
+import { HttpError, sendEmail } from "../helpers/index.js";
 import User from "../models/Users.js";
 import Jimp from "jimp";
 import { error } from "console";
+import { nanoid } from "nanoid";
 
-const { SECRET_JWT } = process.env;
+const { SECRET_JWT, BASE_URL } = process.env;
 
 export async function register(req, res, next) {
   const { email, password } = req.body;
@@ -22,14 +23,29 @@ export async function register(req, res, next) {
 
     const avatarURL = gravatar.url(email);
 
+    const verificationToken = nanoid();
+
     const newUser = await User.create({
       ...req.body,
       password: hashPassword,
       avatarURL,
+      verificationToken,
     });
 
+    const emailData = {
+      to: email,
+      subject: "Verify your email",
+      html: `<a target="_blank" href="${BASE_URL}/api/users/verify/${verificationToken}">Click to verify email</a>`,
+    };
+
+    await sendEmail(emailData);
+
     res.status(201).json({
-      user: { email: newUser.email, subscription: newUser.subscription },
+      user: {
+        email: newUser.email,
+        subscription: newUser.subscription,
+        message: "Check your email for verification",
+      },
     });
   } catch (error) {
     next(error);
@@ -45,7 +61,9 @@ export async function login(req, res, next) {
     if (!user) {
       throw HttpError(401, "Email is wrong");
     }
-
+    if (!user.verify) {
+      throw HttpError(401, "Email is not verified");
+    }
     const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (!isValidPassword) {
@@ -121,11 +139,63 @@ export async function updateAvatar(req, res, next) {
         HttpError(404, error.message);
       });
 
-    const result = await User.findOneAndUpdate(_id, {
+    const result = await User.findByIdAndUpdate(_id, {
       avatarURL: path.join("public", "avatars", filename),
     });
 
     res.json(result.avatarURL);
+  } catch (error) {
+    next(error);
+  }
+}
+export async function updateVerification(req, res, next) {
+  const { verificationToken } = req.params;
+
+  try {
+    const user = await User.findOne({ verificationToken });
+
+    if (!user) {
+      throw HttpError(404, "User not found or email already verify");
+    }
+
+    await User.findOneAndUpdate(
+      { verificationToken },
+      {
+        verificationToken: "",
+        verify: true,
+      }
+    );
+
+    res.json({ message: "Verification successful" });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function resendVerificationEmail(req, res, next) {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    throw HttpError(404, "User not Found");
+  }
+
+  if (user.verify) {
+    throw HttpError(400, "Verification has already been passed");
+  }
+
+  const emailData = {
+    to: email,
+    subject: "Verify your email",
+    html: `<a target="_blank" href="${BASE_URL}/api/users/verify/${user.verificationToken}">Click to verify email</a>`,
+  };
+
+  await sendEmail(emailData);
+
+  res.json({ message: "Verification email sent" });
+
+  try {
   } catch (error) {
     next(error);
   }
