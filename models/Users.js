@@ -16,6 +16,13 @@ export const addUserSchema = Joi.object({
 export const updateSubscriptionSchema = Joi.object({
   subscription: Joi.string().valid(...subscriptionValid),
 });
+
+export const resendVerificationEmailSchema = Joi.object({
+  email: Joi.string()
+    .pattern(emailRegExp)
+    .required()
+    .messages({ "any.required": "missing required field email" }),
+});
 //MONGOOSE
 const userSchema = new Schema(
   {
@@ -38,11 +45,19 @@ const userSchema = new Schema(
     },
     token: String,
     avatarURL: String,
+    verificationToken: {
+      type: String,
+      required: [true, "Verification Token is required"],
+    },
+    verify: {
+      type: Boolean,
+      default: false,
+    },
   },
   { versionKey: false }
 );
 
-userSchema.pre("findOneAndUpdate", setUpdateSettings);
+userSchema.pre("findByIdAndUpdate", setUpdateSettings);
 
 const User = model("user", userSchema);
 

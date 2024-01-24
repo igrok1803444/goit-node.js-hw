@@ -5,7 +5,11 @@ import {
   updateContactSchema,
   updateFavoriteContactSchema,
 } from "../models/Contacts.js";
-import { addUserSchema, updateSubscriptionSchema } from "../models/Users.js";
+import {
+  addUserSchema,
+  resendVerificationEmailSchema,
+  updateSubscriptionSchema,
+} from "../models/Users.js";
 
 function isValidUpdateContact(req, res, next) {
   const { error } = updateContactSchema.validate(req.body);
@@ -59,6 +63,16 @@ function isValidUpdateSubscription(req, res, next) {
     next();
   }
 }
+
+function isValidResendEmailBody(req, res, next) {
+  const { error } = resendVerificationEmailSchema.validate(req.body);
+
+  if (error) {
+    throw HttpError(400, error);
+  } else {
+    next();
+  }
+}
 export default {
   isValidUpdateContact,
   isValidAddContact,
@@ -66,4 +80,5 @@ export default {
   isValidUserAddBody,
   isValidUpdateSubscription,
   isValidID,
+  isValidResendEmailBody,
 };
